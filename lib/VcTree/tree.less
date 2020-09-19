@@ -1,101 +1,118 @@
 @primary-color: #ff9800;
 @border-color-base: #d9d9d9;
 
-.vc-tree-container {
+.vc-tree {
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: hidden;
-  overflow-anchor: none;
 
-  .vc-tree-holder {
+  .vc-tree-container {
     position: relative;
     width: 100%;
+    height: 100%;
     overflow: hidden;
+    overflow-anchor: none;
 
-    .vc-tree-content {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+    .vc-tree-holder {
+      position: relative;
       width: 100%;
+      overflow: hidden;
 
-      .vc-tree-node {
-        box-sizing: border-box;
-        transition: all 0.3s;
-        height: 32px;
-        line-height: 24px;
-        padding: 4px 0;
+      .vc-tree-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
 
-        span {
-          display: inline-block;
-          border-radius: 2px;
-          vertical-align: top;
-        }
-
-        .vc-tree-node-collapse {
-          width: 24px;
-          height: 24px;
-          cursor: pointer;
-          font-size: 10px;
-          text-align: center;
-
-          svg {
-            transition: all 0.3s;
-          }
-
-          .vc-tree-node__collapsed {
-            transform: rotate(-90deg);
-          }
-        }
-
-        .vc-tree-node-checkbox {
+        .vc-tree-node {
+          box-sizing: border-box;
           transition: all 0.3s;
-          margin: 4px 8px 0 0;
-          width: 16px;
-          height: 16px;
-          border: 1px solid @border-color-base;
-          cursor: pointer;
-          color: #ffffff;
-          line-height: 14px;
-          font-size: 6px;
+          height: 32px;
+          line-height: 24px;
+          padding: 4px 0;
 
-          &:hover {
-            border-color: @primary-color;
+          span {
+            display: inline-block;
+            border-radius: 2px;
+            vertical-align: top;
           }
 
-          &.vc-tree-node__checked {
+          .vc-tree-node-collapse {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 10px;
             text-align: center;
-            font-size: 12px;
-            background-color: @primary-color;
-            border-color: @primary-color;
+
+            svg {
+              transition: all 0.3s;
+            }
+
+            .vc-tree-node__collapsed {
+              transform: rotate(-90deg);
+            }
           }
 
-          .vc-tree-node__halfChecked {
-            border-radius: 0;
-            display: block;
-            margin: 3px;
-            width: 8px;
-            height: 8px;
-            background-color: @primary-color;
+          .vc-tree-node-checkbox {
+            transition: all 0.3s;
+            margin: 4px 8px 0 0;
+            width: 16px;
+            height: 16px;
+            border: 1px solid @border-color-base;
+            cursor: pointer;
+            color: #ffffff;
+            line-height: 14px;
+            font-size: 6px;
+
+            &:hover {
+              border-color: @primary-color;
+            }
+
+            &.vc-tree-node__checked {
+              text-align: center;
+              font-size: 12px;
+              background-color: @primary-color;
+              border-color: @primary-color;
+            }
+
+            .vc-tree-node__halfChecked {
+              border-radius: 0;
+              display: block;
+              margin: 3px;
+              width: 8px;
+              height: 8px;
+              background-color: @primary-color;
+            }
           }
-        }
 
-        .vc-tree-node-title {
-          transition: all 0.3s, border 0s, line-height 0s;
-          padding: 0 4px;
-          height: 24px;
-        }
+          .vc-tree-node-title {
+            transition: all 0.3s, border 0s, line-height 0s;
+            padding: 0 4px;
+            height: 24px;
+          }
 
-        .vc-tree-node-selectable {
-          cursor: pointer;
+          .vc-tree-node-selectable {
+            cursor: pointer;
 
-          &:hover {
-            background-color: tint(@primary-color, 80%);
+            &:hover {
+              background-color: tint(@primary-color, 80%);
+            }
           }
         }
       }
     }
+  }
+
+  .vc-tree-thumbnail {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 4px;
+    border-radius: 2px;
+    background-color: rgba(0, 0, 0, 0.4);
+    min-height: 16px;
+    transition: all 0.15s linear, height 0.3s ease-in;
   }
 }

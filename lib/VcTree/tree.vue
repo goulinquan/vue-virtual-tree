@@ -1,83 +1,96 @@
 <template>
-  <div
-    class="vc-tree-container"
-    @wheel="rootScrolled"
-    :style="`height: ${typeof height === 'number' ? height + 'px' : height}`"
-    ref="vc-tree-container"
-  >
-    <div class="vc-tree-holder" :style="`height: ${containerHeight}px`">
-      <div
-        class="vc-tree-content"
-        :style="`transform: translateY(${startIdx * itemHeight}px)`"
-      >
+  <div class="vc-tree">
+    <div
+      class="vc-tree-container"
+      @wheel="rootScrolled"
+      :style="`height: ${typeof height === 'number' ? height + 'px' : height}`"
+      ref="vc-tree-container"
+    >
+      <div class="vc-tree-holder" :style="`height: ${containerHeight}px`">
         <div
-          v-for="item in renderedItems"
-          :key="item.key"
-          class="vc-tree-node"
-          :style="`padding-left: ${item.deep * 24}px`"
+          class="vc-tree-content"
+          :style="`transform: translateY(${startIdx * itemHeight}px)`"
         >
-          <span
-            class="vc-tree-node-collapse"
-            v-if="item.isPNode"
-            @click="expendNode(item.key)"
-          >
-            <svg
-              viewBox="0 0 1024 1024"
-              focusable="false"
-              :class="
-                !_expendedKeys.includes(item.key)
-                  ? 'vc-tree-node__collapsed'
-                  : ''
-              "
-              data-icon="caret-down"
-              width="1em"
-              height="1em"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                d="M840.4 300H183.6c-19.7 0-30.7 20.8-18.5 35l328.4 380.8c9.4 10.9 27.5 10.9 37 0L858.9 335c12.2-14.2 1.2-35-18.5-35z"
-              ></path>
-            </svg>
-          </span>
-          <span v-else class="vc-tree-node-collapse" style="cursor: default" />
-          <span
-            :class="
-              `vc-tree-node-checkbox ${
-                _checkedKeys.includes(item.key) ? 'vc-tree-node__checked' : ''
-              }`
-            "
-            @click="checkItem(item)"
+          <div
+            v-for="item in renderedItems"
+            :key="item.key"
+            class="vc-tree-node"
+            :style="`padding-left: ${item.deep * 24}px`"
           >
             <span
-              class="vc-tree-node__halfChecked"
-              v-if="onHalfCheckedKeys.includes(item.key)"
-            ></span>
-            <svg
-              v-if="_checkedKeys.includes(item.key)"
-              class="icon"
-              style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;"
-              viewBox="0 0 1024 1024"
-              version="1.1"
-              xmlns="http://www.w3.org/2000/svg"
-              p-id="2502"
+              class="vc-tree-node-collapse"
+              v-if="item.isPNode"
+              @click="expendNode(item.key)"
             >
-              <path
-                d="M376.123077 836.923077L51.2 510.030769c-11.815385-11.815385-11.815385-31.507692 0-43.323077l43.323077-43.323077c11.815385-11.815385 31.507692-11.815385 43.323077 0L382.030769 669.538462c7.876923 7.876923 21.661538 7.876923 29.538462 0L890.092308 187.076923c11.815385-11.815385 31.507692-11.815385 43.323077 0l43.323077 43.323077c11.815385 11.815385 11.815385 31.507692 0 43.323077L419.446154 836.923077c-11.815385 13.784615-31.507692 13.784615-43.323077 0z"
-                p-id="2503"
-              ></path>
-            </svg>
-          </span>
-          <span
-            v-if="onClicked && item.selectable !== false"
-            class="vc-tree-node-title vc-tree-node-selectable"
-            @click="onClicked([item.key])"
-            >{{ item.title }}</span
-          >
-          <span v-else>{{ item.title }}</span>
+              <svg
+                viewBox="0 0 1024 1024"
+                focusable="false"
+                :class="
+                  !_expendedKeys.includes(item.key)
+                    ? 'vc-tree-node__collapsed'
+                    : ''
+                "
+                data-icon="caret-down"
+                width="1em"
+                height="1em"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  d="M840.4 300H183.6c-19.7 0-30.7 20.8-18.5 35l328.4 380.8c9.4 10.9 27.5 10.9 37 0L858.9 335c12.2-14.2 1.2-35-18.5-35z"
+                ></path>
+              </svg>
+            </span>
+            <span
+              v-else
+              class="vc-tree-node-collapse"
+              style="cursor: default"
+            />
+            <span
+              :class="
+                `vc-tree-node-checkbox ${
+                  _checkedKeys.includes(item.key) ? 'vc-tree-node__checked' : ''
+                }`
+              "
+              @click="checkItem(item)"
+            >
+              <span
+                class="vc-tree-node__halfChecked"
+                v-if="onHalfCheckedKeys.includes(item.key)"
+              ></span>
+              <svg
+                v-if="_checkedKeys.includes(item.key)"
+                class="icon"
+                style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;"
+                viewBox="0 0 1024 1024"
+                version="1.1"
+                xmlns="http://www.w3.org/2000/svg"
+                p-id="2502"
+              >
+                <path
+                  d="M376.123077 836.923077L51.2 510.030769c-11.815385-11.815385-11.815385-31.507692 0-43.323077l43.323077-43.323077c11.815385-11.815385 31.507692-11.815385 43.323077 0L382.030769 669.538462c7.876923 7.876923 21.661538 7.876923 29.538462 0L890.092308 187.076923c11.815385-11.815385 31.507692-11.815385 43.323077 0l43.323077 43.323077c11.815385 11.815385 11.815385 31.507692 0 43.323077L419.446154 836.923077c-11.815385 13.784615-31.507692 13.784615-43.323077 0z"
+                  p-id="2503"
+                ></path>
+              </svg>
+            </span>
+            <span
+              v-if="onClicked && item.selectable !== false"
+              class="vc-tree-node-title vc-tree-node-selectable"
+              @click="onClicked([item.key])"
+              >{{ item.title }}</span
+            >
+            <span v-else>{{ item.title }}</span>
+          </div>
         </div>
       </div>
     </div>
+    <div
+      v-if="thumbnailHeight"
+      class="vc-tree-thumbnail"
+      :style="
+        `height: ${thumbnailHeight}px; transform: translateY(${thumbnailPos}px);`
+      "
+    ></div>
   </div>
 </template>
 <script>
@@ -123,7 +136,8 @@ export default {
       onExpendedKeys: [], // 展开的key
       onCheckedKeys: [], // 选中的key
       onHalfCheckedKeys: [],
-      clientHeight: 0
+      clientHeight: 0,
+      thumbnailPos: 0
     };
   },
   computed: {
@@ -143,6 +157,17 @@ export default {
     // 总高度
     containerHeight() {
       return this.itemHeight * this.unHiddenList.length;
+    },
+    // 滚动块长度
+    thumbnailHeight() {
+      const height = Math.round(
+        (this.clientHeight / this.containerHeight) * this.clientHeight
+      );
+      return this.containerHeight <= this.clientHeight
+        ? 0
+        : height > 16
+        ? height
+        : 16;
     }
   },
   created() {
@@ -241,6 +266,11 @@ export default {
 
       this.startIdx = startIdx;
       this.endIdx = startIdx + this.itemPerPage;
+
+      this.thumbnailPos = Math.round(
+        (newScrollTop / (this.containerHeight - this.clientHeight)) *
+          (this.clientHeight - this.thumbnailHeight)
+      );
     }, 50),
 
     expendNode(key) {
@@ -379,7 +409,7 @@ export default {
 
     listHeightChanged() {
       const vcCon = this.$refs["vc-tree-container"];
-      console.log(vcCon.scrollTop, this.containerHeight, this.clientHeight);
+
       if (this.containerHeight <= this.clientHeight) {
         this.startIdx = 0;
         this.endIdx = this.itemPerPage;
