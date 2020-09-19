@@ -155,18 +155,26 @@ export default {
     this.clientHeight = this.$refs["vc-tree-container"].clientHeight;
 
     this.itemPerPage = Math.floor(this.clientHeight / 32 + 2);
+
+    this.endIdx = this.itemPerPage;
   },
   methods: {
     setData(data) {
-      console.log(data);
       tree.data = data;
       tree.list = this.flatData(data, 0, "0");
 
       this.triggerRender = this.triggerRender + 1;
-      this.startIdx = 0;
-      this.endIdx = this.itemPerPage;
+
       this.onHalfCheckedKeys = [];
       this.$nextTick(() => {
+        const vcCon = this.$refs["vc-tree-container"];
+
+        if (this.containerHeight <= this.clientHeight) {
+          vcCon.scrollTop = 0;
+        } else if (vcCon.scrollTop > this.containerHeight - this.clientHeight) {
+          vcCon.scrollTop = this.containerHeight - this.clientHeight;
+        }
+        
         if (this.checkedKeys) {
           this.onCheckedKeys = this.checkedKeys;
         }
@@ -381,4 +389,106 @@ export default {
   }
 };
 </script>
-<style lang="less" src="./tree.less"></style>
+<style lang="less">
+@primary-color: #ff9800;
+@border-color-base: #d9d9d9;
+
+.vc-tree-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overflow-anchor: none;
+
+  .vc-tree-holder {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+
+    .vc-tree-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+
+      .vc-tree-node {
+        box-sizing: border-box;
+        transition: all 0.3s;
+        height: 32px;
+        line-height: 24px;
+        padding: 4px 0;
+
+        span {
+          display: inline-block;
+          border-radius: 2px;
+          vertical-align: top;
+        }
+
+        .vc-tree-node-collapse {
+          width: 24px;
+          height: 24px;
+          cursor: pointer;
+          font-size: 10px;
+          text-align: center;
+
+          svg {
+            transition: all 0.3s;
+          }
+
+          .vc-tree-node__collapsed {
+            transform: rotate(-90deg);
+          }
+        }
+
+        .vc-tree-node-checkbox {
+          transition: all 0.3s;
+          margin: 4px 8px 0 0;
+          width: 16px;
+          height: 16px;
+          border: 1px solid @border-color-base;
+          cursor: pointer;
+          color: #ffffff;
+          line-height: 14px;
+          font-size: 6px;
+
+          &:hover {
+            border-color: @primary-color;
+          }
+
+          &.vc-tree-node__checked {
+            text-align: center;
+            font-size: 12px;
+            background-color: @primary-color;
+            border-color: @primary-color;
+          }
+
+          .vc-tree-node__halfChecked {
+            border-radius: 0;
+            display: block;
+            margin: 3px;
+            width: 8px;
+            height: 8px;
+            background-color: @primary-color;
+          }
+        }
+
+        .vc-tree-node-title {
+          transition: all 0.3s, border 0s, line-height 0s;
+          padding: 0 4px;
+          height: 24px;
+        }
+
+        .vc-tree-node-selectable {
+          cursor: pointer;
+
+          &:hover {
+            cursor: defalut;
+          }
+        }
+      }
+    }
+  }
+}
+</style>

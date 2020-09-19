@@ -1,6 +1,6 @@
 <template>
   <div class="hello">
-    <vc-tree ref="vc-tree"></vc-tree>
+    <vc-tree ref="vc-tree" :onClicked="onClicked"></vc-tree>
   </div>
 </template>
 
@@ -46,6 +46,11 @@ export default {
         ]
       }
     ]);
+  },
+  methods: {
+    onClicked() {
+      console.log(1)
+    }
   }
 };
 </script>
