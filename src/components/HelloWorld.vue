@@ -1,6 +1,14 @@
 <template>
   <div class="hello">
-    <vc-tree ref="vc-tree" :onClicked="onClicked" :expandAllParents="true"></vc-tree>
+    <vc-tree
+      ref="vc-tree"
+      :onClicked="onClicked"
+      :checkedKeys="checkedKeys"
+      :expandAllParents="true"
+      style="text-align: left; width: 400px"
+      @expand="expand"
+      @check="check"
+    ></vc-tree>
     <button @click="click">haha</button>
   </div>
 </template>
@@ -9,12 +17,31 @@
 const data = [
   {
     key: "2100C",
-    title: "高速公路管理局 (965)",
+    title: "parent",
     children: [
       {
         key: "92D",
-        title: "高速公路管理局 (965)",
+        title: "parent1",
         children: [
+          {
+            key: "95D",
+            title: "parent3",
+            children: [
+              { key: 210011, title: "辽CME870" },
+              { key: 210021, title: "辽CMD757" },
+              { key: 210031, title: "辽CMD706" },
+              { key: 210041, title: "辽CMD025" },
+              { key: 210051, title: "辽CMD803" },
+              { key: 210061, title: "辽CMK006" },
+              { key: 210071, title: "辽CMK029" },
+              { key: 210081, title: "辽C8919M" },
+              { key: 210091, title: "辽C0058B" },
+              { key: 210101, title: "辽CD1060" },
+              { key: 210111, title: "辽CF0206" },
+              { key: 210121, title: "辽C0020A" }
+            ],
+            selectable: false
+          },
           { key: 21001, title: "辽CME870" },
           { key: 21002, title: "辽CMD757" },
           { key: 21003, title: "辽CMD706" },
@@ -982,6 +1009,20 @@ const data = [
           { key: 30988, title: "辽CYK506" }
         ],
         selectable: false
+      },
+
+      {
+        key: "93D",
+        title: "parent2",
+        children: [
+          {
+            key: "94D",
+            title: "parent3",
+            children: [],
+            selectable: false
+          }
+        ],
+        selectable: false
       }
     ],
     selectable: false
@@ -992,44 +1033,60 @@ export default {
   props: {
     msg: String
   },
+  data() {
+    return {
+      checkedKeys: []
+    };
+  },
   mounted() {
     this.$refs["vc-tree"].setData(data);
   },
   methods: {
+    expand(msg) {
+      console.log(msg);
+    },
+    check(msg) {
+      console.log(msg);
+      this.checkedKeys = [210011];
+    },
     onClicked() {
       console.log(1);
     },
     click() {
-      this.$refs["vc-tree"].setData([
-  {
-    key: "2100C",
-    title: "高速公路管理局 (965)",
-    children: [
-      {
-        key: "92D",
-        title: "高速公路管理局 (965)",
-        children: [
-          { key: 30076, title: "辽CD0081" },
-          { key: 30077, title: "辽C41390" },
-          { key: 30078, title: "辽C3G677" },
-          { key: 30079, title: "辽C03549" },
-          { key: 30080, title: "辽C03527" },
-          { key: 30081, title: "辽C213C1" },
-          { key: 30062, title: "辽C9508Q" },
-          { key: 30063, title: "辽C7609Q" },
-          { key: 30064, title: "辽C6297Q" },
-          { key: 30065, title: "辽C650Q2" },
-          { key: 30066, title: "辽C2067R" },
-          { key: 30067, title: "辽C2170J" },
-          { key: 30068, title: "辽C7960R" },
-          { key: 30069, title: "辽C1620P" },
-        ],
-        selectable: false
+      console.time();
+      let path = data[0].children;
+      for (let i = 0; i < 100000; i++) {
+        path.push({ key: i, title: "辽C" + i });
       }
-    ],
-    selectable: false
-  }]);
-    }
+      this.$refs["vc-tree"].setData(data);
+      console.timeEnd();
+
+      // this.$refs["vc-tree"].setData([
+      //   {
+      //     key: "2100C",
+      //     title: "高速公路管理局",
+      //     children: [
+      //       {
+      //         key: "92D",
+      //         title: "高速公路管理局 ",
+      //         children: [
+      //           { key: 30076, title: "辽CD0081" },
+      //           { key: 30077, title: "辽C41390" },
+      //           { key: 30078, title: "辽C3G677" },
+      //           { key: 30079, title: "辽C03549" },
+      //           { key: 30080, title: "辽C03527" },
+      //           { key: 30081, title: "辽C213C1" },
+      //           { key: 30062, title: "辽C9508Q" },
+      //           { key: 30063, title: "辽C7609Q" }
+      //         ],
+      //         selectable: false
+      //       }
+      //     ],
+      //     selectable: false
+      //   }
+      // ]);
+    },
+    createData() {}
   }
 };
 </script>

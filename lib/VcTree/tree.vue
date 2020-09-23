@@ -9,27 +9,23 @@
       <div class="vc-tree-holder" :style="`height: ${containerHeight}px`">
         <div
           class="vc-tree-content"
-          :style="`transform: translateY(${startIdx * itemHeight}px)`"
+          :style="`transform: translateY(${startIdx * nodeHeight}px)`"
         >
           <div
-            v-for="item in renderedItems"
-            :key="item.key"
+            v-for="node in renderedNodes"
+            :key="node.key"
             class="vc-tree-node"
-            :style="`padding-left: ${item.deep * 24}px`"
+            :style="`padding-left: ${node.path.length * 24}px`"
           >
             <span
               class="vc-tree-node-collapse"
-              v-if="item.isPNode"
-              @click="expendNode(item.key)"
+              v-if="node.isPNode"
+              @click="expandNode(node.key)"
             >
               <svg
                 viewBox="0 0 1024 1024"
                 focusable="false"
-                :class="
-                  !_expendedKeys.includes(item.key)
-                    ? 'vc-tree-node__collapsed'
-                    : ''
-                "
+                :class="node.expand ? '' : 'vc-tree-node__collapsed'"
                 data-icon="caret-down"
                 width="1em"
                 height="1em"
@@ -49,17 +45,17 @@
             <span
               :class="
                 `vc-tree-node-checkbox ${
-                  _checkedKeys.includes(item.key) ? 'vc-tree-node__checked' : ''
+                  node.checked ? 'vc-tree-node__checked' : ''
                 }`
               "
-              @click="checkItem(item)"
+              @click="checkNode(node)"
             >
               <span
                 class="vc-tree-node__halfChecked"
-                v-if="onHalfCheckedKeys.includes(item.key)"
+                v-if="node.halfChecked"
               ></span>
               <svg
-                v-if="_checkedKeys.includes(item.key)"
+                v-if="node.checked"
                 class="icon"
                 style="width: 1em; height: 1em;vertical-align: middle;fill: currentColor;overflow: hidden;"
                 viewBox="0 0 1024 1024"
@@ -74,12 +70,12 @@
               </svg>
             </span>
             <span
-              v-if="onClicked && item.selectable !== false"
+              v-if="onClicked && node.selectable !== false"
               class="vc-tree-node-title vc-tree-node-selectable"
-              @click="onClicked([item.key])"
-              >{{ item.title }}</span
+              @click="onClicked([node.key])"
+              >{{ node.title }}</span
             >
-            <span v-else>{{ item.title }}</span>
+            <span v-else>{{ node.title }}</span>
           </div>
         </div>
       </div>
@@ -94,11 +90,8 @@
   </div>
 </template>
 <script>
-import throttle from "lodash/throttle";
-let tree = {
-  data: [],
-  list: []
-};
+import _ from "lodash";
+
 export default {
   name: "vc-tree",
   model: {
@@ -110,8 +103,8 @@ export default {
     onClicked: Function,
     height: { type: [String, Number], default: 400 },
     expandAllParents: Boolean,
-    expendedKeys: Array,
-    defaultExpendedKeys: {
+    expandedKeys: Array,
+    defaultExpandedKeys: {
       type: Array,
       default: function() {
         return [];
@@ -126,37 +119,41 @@ export default {
     }
   },
   data() {
+    this.tree = {
+      data: [],
+      list: []
+    };
+    this.onCheckedKeys = [];
+    this.onExpandedKeys = [];
     return {
       startIdx: 0,
       endIdx: 0,
-      itemHeight: 32,
-      itemPerPage: 0,
+      nodeHeight: 32,
+      nodePerPage: 0,
       triggerRender: 0, // 用来触发获取列表
-      renderList: [],
-      onExpendedKeys: [], // 展开的key
-      onCheckedKeys: [], // 选中的key
-      onHalfCheckedKeys: [],
       clientHeight: 0,
       thumbnailPos: 0
     };
   },
   computed: {
-    _expendedKeys() {
-      return this.expendedKeys || this.onExpendedKeys;
+    _expandedKeys() {
+      return this.expandedKeys || this.onExpandedKeys;
     },
     _checkedKeys() {
       return this.checkedKeys || this.onCheckedKeys;
     },
     unHiddenList() {
-      return this.triggerRender ? tree.list.filter(item => !item.isHidden) : [];
+      return this.triggerRender
+        ? this.tree.list.filter(node => !node.isHidden)
+        : [];
     },
     // 需要渲染得列表
-    renderedItems() {
+    renderedNodes() {
       return this.unHiddenList.slice(this.startIdx, this.endIdx);
     },
     // 总高度
     containerHeight() {
-      return this.itemHeight * this.unHiddenList.length;
+      return this.nodeHeight * this.unHiddenList.length;
     },
     // 滚动块长度
     thumbnailHeight() {
@@ -170,34 +167,33 @@ export default {
         : 16;
     }
   },
+  watch: {
+    checkedKeys: function(newVal, oldVal) {
+      if (_.isEqual(newVal, oldVal)) return;
+      this.renderCheckedNodes();
+    }
+  },
   created() {
-    this.onExpendedKeys = [...this.defaultExpendedKeys];
+    this.onExpandedKeys = [...this.defaultExpandedKeys];
     this.onCheckedKeys = [...this.defaultCheckedKeys];
-
-    this.renderHalfChecked();
   },
   mounted() {
     this.clientHeight = this.$refs["vc-tree-container"].clientHeight;
 
-    this.itemPerPage = Math.floor(this.clientHeight / 32 + 2);
+    this.nodePerPage = Math.floor(this.clientHeight / 32 + 2);
 
-    this.endIdx = this.itemPerPage;
+    this.endIdx = this.nodePerPage;
   },
   methods: {
     setData(data) {
-      tree.data = data;
-      tree.list = this.flatData(data, 0, "0");
+      this.tree.data = data;
+      this.tree.list = [];
+      this.flatData(data);
 
       this.triggerRender = this.triggerRender + 1;
 
-      this.onHalfCheckedKeys = [];
       this.$nextTick(() => {
         this.listHeightChanged();
-
-        if (this.checkedKeys) {
-          this.onCheckedKeys = this.checkedKeys;
-        }
-        this.onHalfCheckedKeys = this.renderHalfChecked();
       });
     },
 
@@ -208,42 +204,54 @@ export default {
      * @param {string} pId 父级key
      * @return {arry}数组
      */
-    flatData(data, deep, pId) {
-      let result = [];
+    flatData(data) {
+      const newCheckedKeys = [...this._checkedKeys];
+      // const checkedMap = {};
 
-      data.forEach(value => {
-        let items = [];
+      const cb = node => {
+        node.checked = newCheckedKeys.includes(node.key);
 
-        if (value.children && value.children.length > 0) {
-          if (this.expandAllParents) {
-            this.onExpendedKeys.push(value.key);
-          }
-          value.isPNode = true;
-          items = this.flatData(value.children, deep + 1, value.key);
+        if (node.isPNode) {
+          node.expand =
+            this.expandAllParents || this._expandedKeys.includes(node.key);
         }
 
-        delete value.children;
+        const pid = node.path[node.path.length - 1];
 
-        items = [
-          {
-            ...value,
-            deep,
-            pId: pId + "",
-            isHidden: this.expandAllParents ? false : pId !== "0"
-          }
-        ].concat(items);
+        if (!node.checked && newCheckedKeys.includes(pid)) {
+          newCheckedKeys.push(node.key);
+          node.checked = true;
+        }
 
-        result = result.concat(items);
-      });
+        // TODO: ex. checkedMap[node.path[0][1][2]].push(node.checked);
 
-      return result;
+        this.tree.list.push({ ...node, children: [] });
+      };
+
+      this.depthFirstEach(data, [], cb);
     },
 
-    rootScrolled: throttle(function(event) {
+    depthFirstEach(tree, path, cb) {
+      if (!Array.isArray(tree) || !tree.length) return;
+
+      for (let node of tree) {
+        let isPNode = node.children && node.children.length > 0;
+
+        const newNode = { ...node, path, isPNode };
+
+        cb(newNode);
+
+        if (isPNode) {
+          this.depthFirstEach(node.children, [...path, node.key], cb);
+        }
+      }
+    },
+
+    rootScrolled: _.throttle(function(event) {
       if (this.containerHeight <= this.clientHeight) {
         this.$refs["vc-tree-container"].scrollTop = 0;
         this.startIdx = 0;
-        this.endIdx = this.itemPerPage;
+        this.endIdx = this.nodePerPage;
         return;
       }
       let newScrollTop =
@@ -258,14 +266,14 @@ export default {
       this.$refs["vc-tree-container"].scrollTop = newScrollTop;
 
       let startIdx =
-        newScrollTop > 0 ? Math.floor(newScrollTop / this.itemHeight) : 0;
+        newScrollTop > 0 ? Math.floor(newScrollTop / this.nodeHeight) : 0;
 
-      if (startIdx + this.itemPerPage > this.unHiddenList.length) {
-        startIdx = this.unHiddenList.length - this.itemPerPage;
+      if (startIdx + this.nodePerPage > this.unHiddenList.length) {
+        startIdx = this.unHiddenList.length - this.nodePerPage;
       }
 
       this.startIdx = startIdx;
-      this.endIdx = startIdx + this.itemPerPage;
+      this.endIdx = startIdx + this.nodePerPage;
 
       this.thumbnailPos = Math.round(
         (newScrollTop / (this.containerHeight - this.clientHeight)) *
@@ -273,31 +281,21 @@ export default {
       );
     }, 50),
 
-    expendNode(key) {
-      if (this._expendedKeys.includes(key)) {
-        this.onExpendedKeys = this._expendedKeys.filter(val => val !== key);
-      } else {
-        this.onExpendedKeys.push(key);
+    expandNode(key) {
+      const idx = this.tree.list.findIndex(node => node.key === key);
+      const node = this.tree.list[idx];
+
+      node.expand = !node.expand;
+
+      this.toggleChildren(idx, node);
+
+      if (this.$listeners.expand) {
+        const newKeys = this.tree.list
+          .filter(val => val.expand)
+          .map(val => val.key);
+        this.onExpandedKeys = newKeys;
+        this.$emit("expand", newKeys);
       }
-
-      this.hideItem();
-    },
-
-    hideItem() {
-      const isHiddenPId = [];
-
-      tree.list.forEach(item => {
-        if (
-          item.pId !== "0" &&
-          (!this._expendedKeys.includes(item.pId) ||
-            isHiddenPId.includes(item.pId))
-        ) {
-          isHiddenPId.push(item.key);
-          item.isHidden = true;
-        } else {
-          item.isHidden = false;
-        }
-      });
 
       this.triggerRender = this.triggerRender + 1;
 
@@ -306,116 +304,74 @@ export default {
       });
     },
 
-    checkItem({ key, pId }) {
-      let keys = [key];
+    toggleChildren(idx, pNode) {
+      for (let i = idx + 1; i < this.tree.list.length; i++) {
+        const node = this.tree.list[i];
+        if (!node.path.includes(pNode.key)) break;
 
-      tree.list.forEach(item => {
-        if (keys.includes(item.pId)) {
-          keys.push(item.key);
-        }
-      });
-
-      if (this.onCheckedKeys.includes(key)) {
-        this.onCheckedKeys = this.onCheckedKeys.filter(
-          val => !keys.includes(val)
-        );
-      } else {
-        this.onCheckedKeys.push(...keys);
-      }
-
-      this.isParentChecked(pId);
-
-      this.$emit("check", this.onCheckedKeys);
-    },
-
-    isParentChecked(pId) {
-      let allChildChecked = true;
-      let noChildChecked = true;
-      let pPId; // 父级的父级
-
-      tree.list.forEach(item => {
-        if (item.pId === pId && !this.onCheckedKeys.includes(item.key)) {
-          allChildChecked = false;
-        }
-
-        if (
-          item.pId === pId &&
-          (this.onCheckedKeys.includes(item.key) ||
-            this.onHalfCheckedKeys.includes(item.key))
-        ) {
-          noChildChecked = false;
-        }
-
-        if (item.key === pId) {
-          pPId = item.pId;
-        }
-      });
-
-      // 只有发生变化时才需要判断父级是否发生变化
-      if (noChildChecked) {
-        if (this.onCheckedKeys.includes(pId)) {
-          this.onCheckedKeys = this.onCheckedKeys.filter(key => key !== pId);
-
-          this.isParentChecked(pPId);
-        } else if (this.onHalfCheckedKeys.includes(pId)) {
-          this.onHalfCheckedKeys = this.onHalfCheckedKeys.filter(
-            key => key !== pId
-          );
-
-          this.isParentChecked(pPId);
-        }
-      } else if (allChildChecked) {
-        if (!this.onCheckedKeys.includes(pId)) {
-          this.onHalfCheckedKeys = this.onHalfCheckedKeys.filter(
-            key => key !== pId
-          );
-
-          this.onCheckedKeys.push(pId);
-
-          this.isParentChecked(pPId);
-        }
-      } else {
-        if (!this.onHalfCheckedKeys.includes(pId)) {
-          this.onCheckedKeys = this.onCheckedKeys.filter(key => key !== pId);
-          this.onHalfCheckedKeys.push(pId);
-
-          this.isParentChecked(pPId);
-        }
+        node.isHidden = !pNode.expand;
       }
     },
 
-    renderHalfChecked() {
-      const halfCheckedKeys = [];
+    checkNode(node) {
+      node.checked = !node.checked;
+      node.halfChecked = false;
 
-      const pushPIdToHalfChecked = node => {
-        if (
-          this._checkedKeys.includes(node.key) &&
-          node.pId !== "0" &&
-          !halfCheckedKeys.includes(node.pId)
-        ) {
-          halfCheckedKeys.push(node.pId);
+      this.toggleChildrenCheck(node.key, node.checked);
 
-          const PNode = tree.list.find(node => node.key === node.pId);
-          pushPIdToHalfChecked(PNode);
-        }
-      };
+      for (let i = node.path.length; i > 0; i--) {
+        this.isParentChecked(node.path[i - 1]);
+      }
 
-      tree.list.forEach(node => {
-        pushPIdToHalfChecked(node);
-      });
+      if (this.$listeners.check) {
+        const newKeys = this.tree.list
+          .filter(val => val.checked)
+          .map(val => val.key);
+        this.onCheckedKeys = newKeys;
+        this.$emit("check", newKeys);
+      }
 
-      return halfCheckedKeys;
+      this.triggerRender = this.triggerRender + 1;
     },
+
+    toggleChildrenCheck(key, checked) {
+      const index = this.tree.list.findIndex(node => node.key === key);
+      for (let i = index + 1; i < this.tree.list.length; i++) {
+        const node = this.tree.list[i];
+        if (!node.path.includes(key)) break;
+
+        node.checked = checked;
+        node.halfChecked = false;
+      }
+    },
+
+    isParentChecked(key) {
+      const pNode = this.tree.list.find(val => val.key === key);
+
+      const allChildChecked = !this.tree.list.some(
+        node => node.path.includes(key) && !node.checked
+      );
+
+      const noChildChecked = !this.tree.list.some(
+        node => node.path.includes(key) && node.checked
+      );
+
+      pNode.checked = allChildChecked;
+      pNode.halfChecked = !allChildChecked && !noChildChecked;
+    },
+
+    // 选中的key被父级改变了
+    renderCheckedNodes() {},
 
     listHeightChanged() {
       const vcCon = this.$refs["vc-tree-container"];
 
       if (this.containerHeight <= this.clientHeight) {
         this.startIdx = 0;
-        this.endIdx = this.itemPerPage;
+        this.endIdx = this.nodePerPage;
         this.$refs["vc-tree-container"].scrollTop = 0;
       } else if (vcCon.scrollTop >= this.containerHeight - this.clientHeight) {
-        this.startIdx = this.unHiddenList.length - this.itemPerPage;
+        this.startIdx = this.unHiddenList.length - this.nodePerPage;
         this.endIdx = this.unHiddenList.length;
         this.$refs["vc-tree-container"].scrollTop =
           this.containerHeight - this.clientHeight;
