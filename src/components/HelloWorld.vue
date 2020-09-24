@@ -10,6 +10,7 @@
       @check="check"
     ></vc-tree>
     <button @click="click">haha</button>
+    <button @click="change">change</button>
   </div>
 </template>
 
@@ -1042,12 +1043,14 @@ export default {
     this.$refs["vc-tree"].setData(data);
   },
   methods: {
+    change() {
+      this.checkedKeys = ["95D"];
+    },
     expand(msg) {
       console.log(msg);
     },
     check(msg) {
-      console.log(msg);
-      this.checkedKeys = [210011];
+      this.checkedKeys = msg;
     },
     onClicked() {
       console.log(1);

@@ -168,8 +168,8 @@ export default {
     }
   },
   watch: {
-    checkedKeys: function(newVal, oldVal) {
-      if (_.isEqual(newVal, oldVal)) return;
+    checkedKeys: function(newVal) {
+      if (_.isEqual(newVal, this.onCheckedKeys)) return;
       this.renderCheckedNodes();
     }
   },
@@ -197,38 +197,54 @@ export default {
       });
     },
 
-    /**
-     * 拉平树数据
-     * @param {arry} data 数据
-     * @param {number} deep 层级
-     * @param {string} pId 父级key
-     * @return {arry}数组
-     */
     flatData(data) {
-      const newCheckedKeys = [...this._checkedKeys];
-      // const checkedMap = {};
+      const newCheckedKeys = new Set(this._checkedKeys);
+      const PNodes = {}; // 集合,父节点判断是否为全选或半选
 
       const cb = node => {
-        node.checked = newCheckedKeys.includes(node.key);
-
-        if (node.isPNode) {
-          node.expand =
-            this.expandAllParents || this._expandedKeys.includes(node.key);
-        }
+        node.checked = newCheckedKeys.has(node.key);
 
         const pid = node.path[node.path.length - 1];
 
-        if (!node.checked && newCheckedKeys.includes(pid)) {
-          newCheckedKeys.push(node.key);
+        if (!node.checked && newCheckedKeys.has(pid)) {
+          newCheckedKeys.add(node.key);
           node.checked = true;
         }
 
-        // TODO: ex. checkedMap[node.path[0][1][2]].push(node.checked);
+        if (node.isPNode) {
+          PNodes[node.key] = {
+            index: this.tree.list.length,
+            checked: new Set()
+          };
+
+          node.expand =
+            this.expandAllParents || this._expandedKeys.includes(node.key);
+        } else {
+          node.path.forEach(key => {
+            PNodes[key].checked.add(node.checked);
+          });
+        }
 
         this.tree.list.push({ ...node, children: [] });
       };
 
       this.depthFirstEach(data, [], cb);
+
+      this.setParentsState(PNodes);
+    },
+
+    setParentsState(PNodes) {
+      Object.values(PNodes).forEach(pnode => {
+        const node = this.tree.list[pnode.index];
+
+        if (pnode.checked.has(true) && !pnode.checked.has(false)) {
+          node.checked = true;
+          node.halfChecked = false;
+        } else if (pnode.checked.has(true) && pnode.checked.has(false)) {
+          node.checked = false;
+          node.halfChecked = true;
+        }
+      });
     },
 
     depthFirstEach(tree, path, cb) {
@@ -323,7 +339,7 @@ export default {
         this.isParentChecked(node.path[i - 1]);
       }
 
-      if (this.$listeners.check) {
+      if (this.$listeners.check && this.checkedKeys) {
         const newKeys = this.tree.list
           .filter(val => val.checked)
           .map(val => val.key);
@@ -360,8 +376,38 @@ export default {
       pNode.halfChecked = !allChildChecked && !noChildChecked;
     },
 
-    // 选中的key被父级改变了
-    renderCheckedNodes() {},
+    // 完全控制时,选中的key被改变,且和当前状态不一致
+    renderCheckedNodes() {
+      console.log(111);
+      const newOnCheckedKeys = new Set([...this.checkedKeys]);
+      const PNodes = {}; // 集合,父节点判断是否为全选或半选
+
+      this.tree.list.forEach((node, index) => {
+        const pid = node.path[node.path.length - 1];
+
+        node.checked = newOnCheckedKeys.has(node.key);
+
+        if (newOnCheckedKeys.has(pid)) {
+          node.checked = true;
+          newOnCheckedKeys.add(node.key);
+        }
+
+        if (node.isPNode) {
+          PNodes[node.key] = {
+            index: index,
+            checked: new Set()
+          };
+        } else {
+          node.path.forEach(key => {
+            PNodes[key].checked.add(node.checked);
+          });
+        }
+      });
+
+      this.setParentsState(PNodes);
+
+      this.triggerRender = this.triggerRender + 1;
+    },
 
     listHeightChanged() {
       const vcCon = this.$refs["vc-tree-container"];
