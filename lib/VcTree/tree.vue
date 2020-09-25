@@ -86,6 +86,7 @@
       :style="
         `height: ${thumbnailHeight}px; transform: translateY(${thumbnailPos}px);`
       "
+      @mousedown="dragNail"
     ></div>
   </div>
 </template>
@@ -125,6 +126,8 @@ export default {
     };
     this.onCheckedKeys = [];
     this.onExpandedKeys = [];
+
+    this.startPos = 0;
     return {
       startIdx: 0,
       endIdx: 0,
@@ -263,7 +266,7 @@ export default {
       }
     },
 
-    rootScrolled: _.throttle(function(event) {
+    rootScrolled: function(event) {
       if (this.containerHeight <= this.clientHeight) {
         this.$refs["vc-tree-container"].scrollTop = 0;
         this.startIdx = 0;
@@ -279,6 +282,15 @@ export default {
         newScrollTop = this.containerHeight - this.clientHeight;
       }
 
+      this.thumbnailPos = Math.round(
+        (newScrollTop / (this.containerHeight - this.clientHeight)) *
+          (this.clientHeight - this.thumbnailHeight)
+      );
+
+      this.changeScrollTop(newScrollTop);
+    },
+
+    changeScrollTop: _.throttle(function(newScrollTop) {
       this.$refs["vc-tree-container"].scrollTop = newScrollTop;
 
       let startIdx =
@@ -290,11 +302,6 @@ export default {
 
       this.startIdx = startIdx;
       this.endIdx = startIdx + this.nodePerPage;
-
-      this.thumbnailPos = Math.round(
-        (newScrollTop / (this.containerHeight - this.clientHeight)) *
-          (this.clientHeight - this.thumbnailHeight)
-      );
     }, 50),
 
     expandNode(key) {
@@ -378,7 +385,6 @@ export default {
 
     // 完全控制时,选中的key被改变,且和当前状态不一致
     renderCheckedNodes() {
-      console.log(111);
       const newOnCheckedKeys = new Set([...this.checkedKeys]);
       const PNodes = {}; // 集合,父节点判断是否为全选或半选
 
@@ -422,6 +428,36 @@ export default {
         this.$refs["vc-tree-container"].scrollTop =
           this.containerHeight - this.clientHeight;
       }
+    },
+
+    dragNail(event) {
+      this.startPos = event.pageY;
+      window.addEventListener("mousemove", this.dragNailMove);
+      window.addEventListener("mouseup", this.dragNailEnd);
+    },
+
+    dragNailMove(event) {
+      event.preventDefault();
+      let newThumbnailPos = this.thumbnailPos + event.pageY - this.startPos;
+
+      if (newThumbnailPos < 0) {
+        newThumbnailPos = 0;
+      } else if (newThumbnailPos > this.clientHeight - this.thumbnailHeight) {
+        newThumbnailPos = this.clientHeight - this.thumbnailHeight;
+      }
+      const scrollTop =
+        (newThumbnailPos / (this.clientHeight - this.thumbnailHeight)) *
+        this.containerHeight;
+
+      this.changeScrollTop(scrollTop);
+
+      this.startPos = event.pageY;
+      this.thumbnailPos = newThumbnailPos;
+    },
+
+    dragNailEnd() {
+      window.removeEventListener("mousemove", this.dragNailMove);
+      window.removeEventListener("mouseup", this.dragNailEnd);
     }
   }
 };
