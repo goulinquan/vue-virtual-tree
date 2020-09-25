@@ -12,9 +12,11 @@
           :style="`transform: translateY(${startIdx * nodeHeight}px)`"
         >
           <div
-            v-for="node in renderedNodes"
+            v-for="(node, index) in renderedNodes"
             :key="node.key"
-            class="vc-tree-node"
+            :class="
+              `vc-tree-node ${node.disabled ? 'vc-tree-node__disabled' : ''}`
+            "
             :style="`padding-left: ${node.path.length * 24}px`"
           >
             <span
@@ -48,7 +50,7 @@
                   node.checked ? 'vc-tree-node__checked' : ''
                 }`
               "
-              @click="checkNode(node)"
+              @click="checkNode(node, index)"
             >
               <span
                 class="vc-tree-node__halfChecked"
@@ -101,6 +103,7 @@ export default {
   },
   props: {
     checkedKeys: Array,
+    checkStrictly: Boolean, // 父子节点完全关联
     onClicked: Function,
     height: { type: [String, Number], default: 400 },
     expandAllParents: Boolean,
@@ -117,15 +120,23 @@ export default {
       default: function() {
         return [];
       }
-    }
+    },
+    filterKey: [String, Number], // 搜索的关键词
+    filterTreeNode: {
+      type: Function,
+      default: function() {
+        return true;
+      }
+    } // 节点筛选函数, node => Boolean
   },
   data() {
     this.tree = {
       data: [],
       list: []
     };
-    this.onCheckedKeys = [];
-    this.onExpandedKeys = [];
+    this.onCheckedKeys = new Set([]);
+    this.onHalfCheckedKeys = new Set([]);
+    this.onExpandedKeys = new Set([]);
 
     this.startPos = 0;
     return {
@@ -140,10 +151,10 @@ export default {
   },
   computed: {
     _expandedKeys() {
-      return this.expandedKeys || this.onExpandedKeys;
+      return this.expandedKeys || Array.from(this.onExpandedKeys);
     },
     _checkedKeys() {
-      return this.checkedKeys || this.onCheckedKeys;
+      return this.checkedKeys || Array.from(this.onCheckedKeys);
     },
     unHiddenList() {
       return this.triggerRender
@@ -172,13 +183,17 @@ export default {
   },
   watch: {
     checkedKeys: function(newVal) {
-      if (_.isEqual(newVal, this.onCheckedKeys)) return;
+      if (_.isEqual(newVal, Array.from(this.onCheckedKeys))) return;
       this.renderCheckedNodes();
+    },
+    filterKey: function() {
+      this.reset();
     }
   },
   created() {
-    this.onExpandedKeys = [...this.defaultExpandedKeys];
-    this.onCheckedKeys = [...this.defaultCheckedKeys];
+    this.onExpandedKeys = new Set(this.defaultExpandedKeys);
+    this.onCheckedKeys = new Set(this.defaultCheckedKeys);
+    this.onHalfCheckedKeys = new Set([]);
   },
   mounted() {
     this.clientHeight = this.$refs["vc-tree-container"].clientHeight;
@@ -188,7 +203,12 @@ export default {
     this.endIdx = this.nodePerPage;
   },
   methods: {
+    reset() {
+      console.log("Resetting");
+      this.setData(this.tree.data);
+    },
     setData(data) {
+      console.log("Resetting");
       this.tree.data = data;
       this.tree.list = [];
       this.flatData(data);
@@ -201,6 +221,7 @@ export default {
     },
 
     flatData(data) {
+      console.log("Resetting");
       const newCheckedKeys = new Set(this._checkedKeys);
       const PNodes = {}; // 集合,父节点判断是否为全选或半选
 
@@ -231,29 +252,34 @@ export default {
         this.tree.list.push({ ...node, children: [] });
       };
 
-      this.depthFirstEach(data, [], cb);
+      this.depthFirstEach(data, [], cb, this.filterKey, this.filterTreeNode);
 
       this.setParentsState(PNodes);
     },
 
     setParentsState(PNodes) {
+      if (this.checkStrictly) return;
+
       Object.values(PNodes).forEach(pnode => {
         const node = this.tree.list[pnode.index];
 
-        if (pnode.checked.has(true) && !pnode.checked.has(false)) {
-          node.checked = true;
-          node.halfChecked = false;
-        } else if (pnode.checked.has(true) && pnode.checked.has(false)) {
-          node.checked = false;
-          node.halfChecked = true;
+        this.changeChecked(
+          node,
+          pnode.checked.has(true) && !pnode.checked.has(false)
+        );
+        if (pnode.checked.has(true) && pnode.checked.has(false)) {
+          this.addHalfCheck(node);
         }
       });
     },
 
-    depthFirstEach(tree, path, cb) {
+    depthFirstEach(tree, path, cb, filterKey, filter) {
       if (!Array.isArray(tree) || !tree.length) return;
 
       for (let node of tree) {
+        if (filterKey && !node.title.includes(filterKey)) continue;
+        if (filter && !filter(node)) continue;
+
         let isPNode = node.children && node.children.length > 0;
 
         const newNode = { ...node, path, isPNode };
@@ -261,7 +287,13 @@ export default {
         cb(newNode);
 
         if (isPNode) {
-          this.depthFirstEach(node.children, [...path, node.key], cb);
+          this.depthFirstEach(
+            node.children,
+            [...path, node.key],
+            cb,
+            filterKey,
+            filter
+          );
         }
       }
     },
@@ -317,7 +349,7 @@ export default {
           .filter(val => val.expand)
           .map(val => val.key);
         this.onExpandedKeys = newKeys;
-        this.$emit("expand", newKeys);
+        this.$emit("expand", [newKeys, { expended: node.expand, node }]);
       }
 
       this.triggerRender = this.triggerRender + 1;
@@ -336,66 +368,100 @@ export default {
       }
     },
 
-    checkNode(node) {
-      node.checked = !node.checked;
-      node.halfChecked = false;
+    checkNode(node, index) {
+      this.changeChecked(node, !node.checked);
 
-      this.toggleChildrenCheck(node.key, node.checked);
+      this.toggleChildrenCheck(node.key, node.checked, index);
 
-      for (let i = node.path.length; i > 0; i--) {
-        this.isParentChecked(node.path[i - 1]);
+      if (!this.checkStrictly) {
+        for (let i = node.path.length; i > 0; i--) {
+          this.isParentChecked(node.path[i - 1]);
+        }
       }
 
-      if (this.$listeners.check && this.checkedKeys) {
-        const newKeys = this.tree.list
-          .filter(val => val.checked)
-          .map(val => val.key);
-        this.onCheckedKeys = newKeys;
-        this.$emit("check", newKeys);
+      if (this.$listeners.check) {
+        this.$emit("check", Array.from(this.onCheckedKeys), {
+          checked: !node.checked,
+          node,
+          halfChecked: this.checkStrictly
+            ? Array.from(this.onHalfCheckedKeys)
+            : null
+        });
       }
 
       this.triggerRender = this.triggerRender + 1;
     },
 
-    toggleChildrenCheck(key, checked) {
-      const index = this.tree.list.findIndex(node => node.key === key);
+    toggleChildrenCheck(key, checked, index) {
+      if (this.checkStrictly) return;
+
       for (let i = index + 1; i < this.tree.list.length; i++) {
         const node = this.tree.list[i];
         if (!node.path.includes(key)) break;
 
-        node.checked = checked;
-        node.halfChecked = false;
+        this.changeChecked(node, checked);
       }
     },
 
+    changeChecked(node, checked) {
+      node.checked = checked;
+      node.halfChecked = false;
+
+      if (node.checked) {
+        this.onCheckedKeys.add(node.key);
+        this.onHalfCheckedKeys.delete(node.key);
+      } else {
+        this.onCheckedKeys.delete(node.key);
+        this.onHalfCheckedKeys.delete(node.key);
+      }
+    },
+
+    addHalfCheck(node) {
+      node.checked = false;
+      node.halfChecked = true;
+
+      this.onCheckedKeys.delete(node.key);
+      this.onHalfCheckedKeys.add(node.key);
+    },
+
     isParentChecked(key) {
-      const pNode = this.tree.list.find(val => val.key === key);
+      let allChildChecked = true;
+      let noChildChecked = true;
 
-      const allChildChecked = !this.tree.list.some(
-        node => node.path.includes(key) && !node.checked
-      );
+      const list = this.tree.list;
+      const pNode = list.findIndex(val => val.key === key);
+      for (let i = pNode + 1; i < list.length; i++) {
+        if (!list[i].path.includes(key)) break;
 
-      const noChildChecked = !this.tree.list.some(
-        node => node.path.includes(key) && node.checked
-      );
+        if (list[i].checked) {
+          noChildChecked = false;
+        } else {
+          // console.log(list[i]);
+          allChildChecked = false;
+        }
+      }
 
-      pNode.checked = allChildChecked;
-      pNode.halfChecked = !allChildChecked && !noChildChecked;
+      this.changeChecked(list[pNode], allChildChecked);
+
+      if (!allChildChecked && !noChildChecked) {
+        this.addHalfCheck(list[pNode]);
+      }
     },
 
     // 完全控制时,选中的key被改变,且和当前状态不一致
     renderCheckedNodes() {
-      const newOnCheckedKeys = new Set([...this.checkedKeys]);
+      console.log("Resetting");
+      this.onCheckedKeys = new Set(this.checkedKeys);
       const PNodes = {}; // 集合,父节点判断是否为全选或半选
 
       this.tree.list.forEach((node, index) => {
         const pid = node.path[node.path.length - 1];
 
-        node.checked = newOnCheckedKeys.has(node.key);
+        node.checked = this.onCheckedKeys.has(node.key);
 
-        if (newOnCheckedKeys.has(pid)) {
+        if (this.onCheckedKeys.has(pid)) {
           node.checked = true;
-          newOnCheckedKeys.add(node.key);
+          this.onCheckedKeys.add(node.key);
         }
 
         if (node.isPNode) {

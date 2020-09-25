@@ -5,6 +5,7 @@
   position: relative;
   width: 100%;
   height: 100%;
+  color: rgba(0, 0, 0, 0.85);
 
   .vc-tree-container {
     position: relative;
@@ -99,6 +100,30 @@
 
             &:hover {
               background-color: tint(@primary-color, 80%);
+            }
+          }
+
+          &.vc-tree-node__disabled {
+            color: rgba(0, 0, 0, 0.25);
+            cursor: not-allowed;
+
+            .vc-tree-node-collapse {
+              color: rgba(0, 0, 0, 0.85);
+            }
+
+            .vc-tree-node-checkbox {
+              pointer-events: none;
+              background-color: #f5f5f5;
+              border-color: #d9d9d9;
+              cursor: not-allowed;
+
+              &.vc-tree-node__checked {
+                color: #f5f5f5;
+              }
+
+              .vc-tree-node__halfChecked {
+                color: #f5f5f5;
+              }
             }
           }
         }

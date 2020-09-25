@@ -2,7 +2,7 @@
   "name": "vc-tree",
   "author": "lynn",
   "description": "A vitrual scroll for bidata tree component of vuejs",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "main": "dist/vc-tree.umd.min.js",
   "license": "MIT",
   "private": false,
