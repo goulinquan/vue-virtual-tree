@@ -84,7 +84,7 @@
     </div>
     <div
       v-if="thumbnailHeight"
-      class="vc-tree-thumbnail"
+      :class="`vc-tree-thumbnail ${onDrag}`"
       :style="
         `height: ${thumbnailHeight}px; transform: translateY(${thumbnailPos}px);`
       "
@@ -104,30 +104,29 @@ export default {
   props: {
     checkedKeys: Array,
     checkStrictly: Boolean, // 父子节点完全关联
-    onClicked: Function,
-    height: { type: [String, Number], default: 400 },
-    expandAllParents: Boolean,
-    expandedKeys: Array,
-    defaultExpandedKeys: {
-      type: Array,
-      default: function() {
-        return [];
-      }
-    },
-    // checkededKeys: Array,
     defaultCheckedKeys: {
       type: Array,
       default: function() {
         return [];
       }
     },
+    defaultExpandedKeys: {
+      type: Array,
+      default: function() {
+        return [];
+      }
+    },
+    expandAllParents: Boolean,
+    expandedKeys: Array,
     filterKey: [String, Number], // 搜索的关键词
     filterTreeNode: {
       type: Function,
       default: function() {
         return true;
       }
-    } // 节点筛选函数, node => Boolean
+    }, // 节点筛选函数, node => Boolean
+    height: { type: [String, Number], default: 400 },
+    onClicked: Function,
   },
   data() {
     this.tree = {
@@ -146,7 +145,8 @@ export default {
       nodePerPage: 0,
       triggerRender: 0, // 用来触发获取列表
       clientHeight: 0,
-      thumbnailPos: 0
+      thumbnailPos: 0,
+      onDrag: ""
     };
   },
   computed: {
@@ -187,7 +187,7 @@ export default {
       this.renderCheckedNodes();
     },
     filterKey: function() {
-      this.reset();
+      this.update();
     }
   },
   created() {
@@ -203,12 +203,10 @@ export default {
     this.endIdx = this.nodePerPage;
   },
   methods: {
-    reset() {
-      console.log("Resetting");
+    update() {
       this.setData(this.tree.data);
     },
     setData(data) {
-      console.log("Resetting");
       this.tree.data = data;
       this.tree.list = [];
       this.flatData(data);
@@ -221,7 +219,6 @@ export default {
     },
 
     flatData(data) {
-      console.log("Resetting");
       const newCheckedKeys = new Set(this._checkedKeys);
       const PNodes = {}; // 集合,父节点判断是否为全选或半选
 
@@ -436,7 +433,6 @@ export default {
         if (list[i].checked) {
           noChildChecked = false;
         } else {
-          // console.log(list[i]);
           allChildChecked = false;
         }
       }
@@ -450,7 +446,6 @@ export default {
 
     // 完全控制时,选中的key被改变,且和当前状态不一致
     renderCheckedNodes() {
-      console.log("Resetting");
       this.onCheckedKeys = new Set(this.checkedKeys);
       const PNodes = {}; // 集合,父节点判断是否为全选或半选
 
@@ -500,6 +495,7 @@ export default {
       this.startPos = event.pageY;
       window.addEventListener("mousemove", this.dragNailMove);
       window.addEventListener("mouseup", this.dragNailEnd);
+      this.onDrag = "vc-tree-thumbnail__ondrag";
     },
 
     dragNailMove(event) {
@@ -524,6 +520,7 @@ export default {
     dragNailEnd() {
       window.removeEventListener("mousemove", this.dragNailMove);
       window.removeEventListener("mouseup", this.dragNailEnd);
+      this.onDrag = "";
     }
   }
 };

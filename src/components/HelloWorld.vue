@@ -7,8 +7,6 @@
       :expandAllParents="true"
       style="text-align: left; width: 400px"
       @expand="expand"
-      :filterTreeNode="filterTreeNode"
-      :filterKey="filterKey"
     ></vc-tree>
     <button @click="click">haha</button>
     <button @click="change">change</button>
@@ -94,7 +92,7 @@ export default {
     change() {
       this.checkedKeys = ["parent3"];
       this.filterKey = "";
-      this.$refs["vc-tree"].reset();
+      this.$refs["vc-tree"].update();
     },
     expand(msg) {
       console.log(msg);
