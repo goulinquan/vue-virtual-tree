@@ -6,7 +6,6 @@
       v-model="checkedKeys"
       :expandAllParents="true"
       style="text-align: left; width: 400px"
-      @expand="expand"
     ></vc-tree>
     <button @click="click">haha</button>
     <button @click="change">change</button>

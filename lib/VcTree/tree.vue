@@ -126,7 +126,7 @@ export default {
       }
     }, // 节点筛选函数, node => Boolean
     height: { type: [String, Number], default: 400 },
-    onClicked: Function,
+    onClicked: Function
   },
   data() {
     this.tree = {
@@ -240,6 +240,10 @@ export default {
 
           node.expand =
             this.expandAllParents || this._expandedKeys.includes(node.key);
+
+          if (node.expand) {
+            this.onExpandedKeys.add(node.key);
+          }
         } else {
           node.path.forEach(key => {
             PNodes[key].checked.add(node.checked);
@@ -339,14 +343,19 @@ export default {
 
       node.expand = !node.expand;
 
+      if (node.expand) {
+        this.onExpandedKeys.add(node.key);
+      } else {
+        this.onExpandedKeys.delete(node.key);
+      }
+
       this.toggleChildren(idx, node);
 
       if (this.$listeners.expand) {
-        const newKeys = this.tree.list
-          .filter(val => val.expand)
-          .map(val => val.key);
-        this.onExpandedKeys = newKeys;
-        this.$emit("expand", [newKeys, { expended: node.expand, node }]);
+        this.$emit("expand", [
+          Array.from(this.onExpandedKeys),
+          { expanded: node.expand, node }
+        ]);
       }
 
       this.triggerRender = this.triggerRender + 1;
@@ -361,7 +370,13 @@ export default {
         const node = this.tree.list[i];
         if (!node.path.includes(pNode.key)) break;
 
-        node.isHidden = !pNode.expand;
+        let isHidden = false;
+        node.path.forEach(key => {
+          if (!this.onExpandedKeys.has(key)) {
+            isHidden = true;
+          }
+        });
+        node.isHidden = isHidden;
       }
     },
 
