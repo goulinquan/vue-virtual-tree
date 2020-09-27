@@ -72,7 +72,7 @@
               </svg>
             </span>
             <span
-              v-if="onClicked && node.selectable !== false"
+              v-if="node.selectable !== false"
               class="vc-tree-node-title vc-tree-node-selectable"
               @click="onClicked([node.key])"
               >{{ node.title }}</span
@@ -125,8 +125,7 @@ export default {
         return true;
       }
     }, // 节点筛选函数, node => Boolean
-    height: { type: [String, Number], default: 400 },
-    onClicked: Function
+    height: { type: [String, Number], default: 400 }
   },
   data() {
     this.tree = {
@@ -536,6 +535,12 @@ export default {
       window.removeEventListener("mousemove", this.dragNailMove);
       window.removeEventListener("mouseup", this.dragNailEnd);
       this.onDrag = "";
+    },
+
+    titleClicked(node) {
+      if (this.$listeners.select) {
+        this.$emit("select", [node.key, node]);
+      }
     }
   }
 };

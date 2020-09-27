@@ -2,7 +2,7 @@
   <div class="hello">
     <vc-tree
       ref="vc-tree"
-      :onClicked="onClicked"
+      @select="onClicked"
       v-model="checkedKeys"
       :expandAllParents="true"
       style="text-align: left; width: 400px"
