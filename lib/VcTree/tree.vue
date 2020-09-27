@@ -74,7 +74,7 @@
             <span
               v-if="node.selectable !== false"
               class="vc-tree-node-title vc-tree-node-selectable"
-              @click="onClicked([node.key])"
+              @click="titleClicked([node.key])"
               >{{ node.title }}</span
             >
             <span v-else>{{ node.title }}</span>
