@@ -96,8 +96,8 @@ export default {
     expand(msg) {
       console.log(msg);
     },
-    onClicked() {
-      console.log(1);
+    onClicked(node) {
+      console.log(node);
     },
     click() {
       console.time();

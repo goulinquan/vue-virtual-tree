@@ -12,7 +12,7 @@
           :style="`transform: translateY(${startIdx * nodeHeight}px)`"
         >
           <div
-            v-for="(node, index) in renderedNodes"
+            v-for="node in renderedNodes"
             :key="node.key"
             :class="
               `vc-tree-node ${node.disabled ? 'vc-tree-node__disabled' : ''}`
@@ -50,7 +50,7 @@
                   node.checked ? 'vc-tree-node__checked' : ''
                 }`
               "
-              @click="checkNode(node, index)"
+              @click="checkNode(node)"
             >
               <span
                 class="vc-tree-node__halfChecked"
@@ -74,10 +74,10 @@
             <span
               v-if="node.selectable !== false"
               class="vc-tree-node-title vc-tree-node-selectable"
-              @click="titleClicked([node.key])"
+              @click="titleClicked(node)"
               >{{ node.title }}</span
             >
-            <span v-else>{{ node.title }}</span>
+            <span class="vc-tree-node-title" v-else>{{ node.title }}</span>
           </div>
         </div>
       </div>
@@ -379,10 +379,10 @@ export default {
       }
     },
 
-    checkNode(node, index) {
+    checkNode(node) {
       this.changeChecked(node, !node.checked);
 
-      this.toggleChildrenCheck(node.key, node.checked, index);
+      this.toggleChildrenCheck(node.key, node.checked);
 
       if (!this.checkStrictly) {
         for (let i = node.path.length; i > 0; i--) {
@@ -403,8 +403,9 @@ export default {
       this.triggerRender = this.triggerRender + 1;
     },
 
-    toggleChildrenCheck(key, checked, index) {
+    toggleChildrenCheck(key, checked) {
       if (this.checkStrictly) return;
+      let index = this.tree.list.findIndex(node => node.key === key);
 
       for (let i = index + 1; i < this.tree.list.length; i++) {
         const node = this.tree.list[i];
@@ -539,7 +540,7 @@ export default {
 
     titleClicked(node) {
       if (this.$listeners.select) {
-        this.$emit("select", [node.key, node]);
+        this.$emit("select", node);
       }
     }
   }
